@@ -148,6 +148,4 @@ Possible future features include:
 * Notification reminders
 * Goal progress tracking
 
-## Resume Description
 
-PayPilot is an AI-assisted cash-flow planning web application built with React, TypeScript, Node.js, Express, PostgreSQL, and Prisma. It allows users to create custom timeline budget plans, manage income and expenses, track savings goals, calculate budget health, and receive AI-generated advisory insights.
