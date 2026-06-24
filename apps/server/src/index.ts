@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { budgetPlanRouter } from "./modules/budget-plans/budget-plan.router";
 
 dotenv.config();
 
@@ -16,6 +17,20 @@ app.get("/api/health", (_req, res) => {
     message: "PayPilot API is running",
   });
 });
+
+app.use("/api/budget-plans", budgetPlanRouter);
+
+app.use(
+  (
+    error: unknown,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    console.error("Unhandled API error", error);
+    res.status(500).json({ error: "An unexpected server error occurred." });
+  },
+);
 
 app.listen(PORT, () => {
   console.log(`PayPilot server running on port ${PORT}`);
