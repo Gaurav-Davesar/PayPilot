@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model BudgetPlan {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+
+  incomeSources   IncomeSource[]
+  expenses        Expense[]
+  savingsGoals    SavingsGoal[]
+  advisoryReviews AdvisoryReview[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model IncomeSource {
+  id           String     @id @default(cuid())
+  budgetPlanId String
+  budgetPlan   BudgetPlan @relation(fields: [budgetPlanId], references: [id], onDelete: Cascade)
+
+  name         String
+  amount       Decimal
+  expectedDate DateTime?
+  notes        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Expense {
+  id           String      @id @default(cuid())
+  budgetPlanId String
+  budgetPlan   BudgetPlan @relation(fields: [budgetPlanId], references: [id], onDelete: Cascade)
+
+  name     String
+  amount   Decimal
+  category String
+  type     ExpenseType
+  dueDate  DateTime?
+  notes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SavingsGoal {
+  id           String     @id @default(cuid())
+  budgetPlanId String
+  budgetPlan   BudgetPlan @relation(fields: [budgetPlanId], references: [id], onDelete: Cascade)
+
+  name         String
+  targetAmount Decimal
+  priority     Priority?
+  notes        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdvisoryReview {
+  id                   String       @id @default(cuid())
+  budgetPlanId          String
+  budgetPlan            BudgetPlan  @relation(fields: [budgetPlanId], references: [id], onDelete: Cascade)
+
+  status                BudgetStatus
+  summary               String
+  riskFactor            String?
+  positiveObservation   String?
+  suggestedAdjustment   String?
+  reviewType            ReviewType
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ExpenseType {
+  FIXED
+  FLEXIBLE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum BudgetStatus {
+  HEALTHY
+  TIGHT
+  OVER_BUDGET
+}
+
+enum ReviewType {
+  RULE_BASED
+  AI_ASSISTED
+}
