@@ -256,11 +256,15 @@ Your plan is possible, but your remaining buffer is low. After expenses and savi
 
 The system should include rule-based advisory logic so that PayPilot can generate basic advice even if the AI service is unavailable.
 
+Current implementation: PayPilot generates and stores `RULE_BASED` advisory reviews with a summary, risk factor, positive observation, and suggested adjustment.
+
 ### FR15: AI-Assisted Advice
 
 The system should send structured budget summary data to an AI service and receive a plain-English advisory response.
 
 The AI response should not provide regulated financial advice, investment recommendations, tax advice, loan recommendations, or instructions to move money.
+
+Current implementation note: external AI generation is planned as a future upgrade. The MVP currently uses the rule-based advisory engine to keep behavior deterministic and safe.
 
 ## 6. Non-Functional Requirements
 

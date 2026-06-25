@@ -39,6 +39,7 @@ On Windows systems that block PowerShell scripts, use `npx.cmd prisma <command>`
 - `POST /api/budget-plans/:id/savings-goals`
 - `PUT /api/savings-goals/:goalId`
 - `DELETE /api/savings-goals/:goalId`
+- `POST /api/budget-plans/:id/advisory-review`
 
 Financial item mutations return the updated budget plan snapshot, including item lists and recalculated summary totals.
 
@@ -51,3 +52,5 @@ Income sources and expenses support these schedule frequencies:
 - `CUSTOM`
 
 For `CUSTOM`, pass `customDates` as an array of ISO date strings. For weekly, fortnightly, and monthly records, the income `expectedDate` or expense `dueDate` acts as the first occurrence date; if it is omitted, the budget plan start date is used for projection.
+
+Advisory reviews are generated from the current budget summary and stored as `RULE_BASED` reviews. They include a plain-English summary, risk factor, positive observation, and suggested adjustment. They are general planning observations only and are not regulated financial advice.

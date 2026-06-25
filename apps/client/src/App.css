@@ -455,6 +455,139 @@ h3 {
   margin-top: 22px;
 }
 
+.advisory-panel {
+  background: #fbfbf7;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  margin-top: 18px;
+  padding: 20px;
+}
+
+.advisory-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.advisory-header h3 {
+  margin-bottom: 8px;
+}
+
+.advisory-header p:last-child,
+.empty-advisory p,
+.review-meta,
+.review-history article span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.review-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-top: 18px;
+  padding: 18px;
+}
+
+.review-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.review-summary {
+  color: var(--ink);
+  font-size: 0.98rem;
+  line-height: 1.65;
+  margin-bottom: 16px;
+}
+
+.insight-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.insight-grid article {
+  background: var(--paper-strong);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.insight-grid span {
+  color: var(--accent-deep);
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.insight-grid p {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  margin-bottom: 0;
+}
+
+.empty-advisory {
+  align-items: center;
+  background: #fff;
+  border: 1px dashed var(--line-dark);
+  border-radius: 14px;
+  color: var(--muted);
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+}
+
+.empty-advisory span {
+  color: var(--accent-deep);
+  font-size: 1.25rem;
+}
+
+.empty-advisory p {
+  margin-bottom: 0;
+}
+
+.review-history {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+.review-history summary {
+  color: var(--accent-deep);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.history-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.review-history article {
+  background: #fbfbf7;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.review-history article p {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  margin: 6px 0 0;
+}
+
 .financial-sections {
   display: grid;
   gap: 18px;
@@ -816,6 +949,18 @@ select {
   }
 
   .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .advisory-header {
+    flex-direction: column;
+  }
+
+  .advisory-header .button {
+    width: 100%;
+  }
+
+  .insight-grid {
     grid-template-columns: 1fr;
   }
 

@@ -11,6 +11,7 @@ PayPilot is a portfolio project built as a full-stack TypeScript application. It
 - Supports one-time, weekly, fortnightly, monthly, and custom-date schedules for money in and money out.
 - Stores plans in Neon PostgreSQL through Prisma ORM.
 - Displays a clear planning dashboard with live totals, remaining buffer, expense-to-income ratio, savings rate, and budget health.
+- Generates and stores rule-based advisory reviews with summary, risk factor, positive observation, and suggested adjustment.
 - Applies server-side validation for required fields, positive money amounts, enums, date validity, and valid date ranges.
 - Removes related records automatically when a budget plan is deleted (via Prisma cascade relations).
 
@@ -20,7 +21,8 @@ PayPilot is a portfolio project built as a full-stack TypeScript application. It
 - [x] Budget plan CRUD: create, view, update, delete, and persist plans.
 - [x] Financial inputs: income sources, planned expenses, and savings goals.
 - [x] Budget analysis: totals, remaining buffer, ratios, and health status.
-- [ ] Advisory review: rule-based insights and carefully scoped AI-assisted explanations.
+- [x] Advisory review: rule-based cash-flow insights and stored review history.
+- [ ] AI-assisted review upgrade with carefully scoped explanations.
 - [ ] Deployment and final portfolio documentation.
 
 ## Tech stack
@@ -113,6 +115,7 @@ npm run dev
 | `POST` | `/api/budget-plans/:id/savings-goals` | Add a savings goal |
 | `PUT` | `/api/savings-goals/:goalId` | Update a savings goal |
 | `DELETE` | `/api/savings-goals/:goalId` | Delete a savings goal |
+| `POST` | `/api/budget-plans/:id/advisory-review` | Generate and store a rule-based advisory review |
 
 Example create request:
 
@@ -161,6 +164,14 @@ For `CUSTOM`, include one or more dates:
 }
 ```
 
+Generate an advisory review:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri http://localhost:5000/api/budget-plans/<plan-id>/advisory-review
+```
+
+The response returns the updated budget plan, including the latest advisory reviews. Advisory reviews are general cash-flow planning observations only and are not regulated financial advice.
+
 ## Documentation
 
 - [Product brief](docs/ProjectBrief.md)
@@ -185,3 +196,4 @@ npm run lint
 The budget-plan API has also been exercised against the configured Neon database using a create, read, update, and delete flow with the temporary record removed afterward.
 The financial item API has been smoke-tested with temporary income, expense, and savings goal records that were created, updated, deleted, and then removed from the database.
 Recurring schedule behavior has also been smoke-tested with weekly, fortnightly, and custom-date records.
+The advisory review endpoint has been smoke-tested with a temporary budget plan and removed afterward.

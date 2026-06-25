@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { advisoryReviewRouter } from "./modules/advisory/advisory-review.router";
 import { budgetPlanRouter } from "./modules/budget-plans/budget-plan.router";
 import { financialItemRouter } from "./modules/financial-items/financial-item.router";
 
@@ -20,6 +21,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/budget-plans", budgetPlanRouter);
+app.use("/api/budget-plans", advisoryReviewRouter);
 app.use("/api", financialItemRouter);
 
 app.use(

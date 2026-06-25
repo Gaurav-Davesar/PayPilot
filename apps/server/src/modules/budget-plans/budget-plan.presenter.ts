@@ -49,6 +49,23 @@ const budgetPlanInclude = {
       createdAt: "desc",
     },
   },
+  advisoryReviews: {
+    select: {
+      id: true,
+      status: true,
+      summary: true,
+      riskFactor: true,
+      positiveObservation: true,
+      suggestedAdjustment: true,
+      reviewType: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 5,
+  },
 } satisfies Prisma.BudgetPlanInclude;
 
 export type BudgetPlanWithFinancialItems = Prisma.BudgetPlanGetPayload<{
@@ -226,6 +243,17 @@ export function presentBudgetPlan(plan: BudgetPlanWithFinancialItems) {
       notes: goal.notes,
       createdAt: goal.createdAt.toISOString(),
       updatedAt: goal.updatedAt.toISOString(),
+    })),
+    advisoryReviews: plan.advisoryReviews.map((review) => ({
+      id: review.id,
+      status: review.status,
+      summary: review.summary,
+      riskFactor: review.riskFactor,
+      positiveObservation: review.positiveObservation,
+      suggestedAdjustment: review.suggestedAdjustment,
+      reviewType: review.reviewType,
+      createdAt: review.createdAt.toISOString(),
+      updatedAt: review.updatedAt.toISOString(),
     })),
     summary: {
       totalIncome,

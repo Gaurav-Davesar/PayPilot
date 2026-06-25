@@ -7,6 +7,7 @@ type BudgetStatus = 'HEALTHY' | 'TIGHT' | 'OVER_BUDGET'
 type ExpenseType = 'FIXED' | 'FLEXIBLE'
 type Priority = 'LOW' | 'MEDIUM' | 'HIGH'
 type ScheduleFrequency = 'ONCE' | 'WEEKLY' | 'FORTNIGHTLY' | 'MONTHLY' | 'CUSTOM'
+type ReviewType = 'RULE_BASED' | 'AI_ASSISTED'
 type FinancialItemKind = 'income' | 'expense' | 'goal'
 
 interface IncomeSource {
@@ -49,6 +50,18 @@ interface SavingsGoal {
   updatedAt: string
 }
 
+interface AdvisoryReview {
+  id: string
+  status: BudgetStatus
+  summary: string
+  riskFactor: string | null
+  positiveObservation: string | null
+  suggestedAdjustment: string | null
+  reviewType: ReviewType
+  createdAt: string
+  updatedAt: string
+}
+
 interface BudgetPlan {
   id: string
   title: string
@@ -60,6 +73,7 @@ interface BudgetPlan {
   incomeSources: IncomeSource[]
   expenses: Expense[]
   savingsGoals: SavingsGoal[]
+  advisoryReviews: AdvisoryReview[]
   summary: {
     totalIncome: number
     totalExpenses: number
@@ -158,8 +172,20 @@ const dateFormatter = new Intl.DateTimeFormat('en-AU', {
   year: 'numeric',
 })
 
+const dateTimeFormatter = new Intl.DateTimeFormat('en-AU', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+})
+
 function formatDate(date: string) {
   return dateFormatter.format(new Date(date))
+}
+
+function formatDateTime(date: string) {
+  return dateTimeFormatter.format(new Date(date))
 }
 
 function formatOptionalDate(date: string | null) {
@@ -199,6 +225,10 @@ function scheduleLabel(frequency: ScheduleFrequency) {
   }
 
   return labels[frequency]
+}
+
+function reviewTypeLabel(reviewType: ReviewType) {
+  return reviewType === 'RULE_BASED' ? 'Rule-based review' : 'AI-assisted review'
 }
 
 function occurrenceLabel(count: number) {
@@ -256,6 +286,7 @@ function App() {
   const [goalForm, setGoalForm] = useState<SavingsGoalForm>(emptySavingsGoalForm)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isGeneratingReview, setIsGeneratingReview] = useState(false)
   const [savingItem, setSavingItem] = useState<FinancialItemKind | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -263,6 +294,7 @@ function App() {
     () => plans.find((plan) => plan.id === selectedPlanId) ?? plans[0] ?? null,
     [plans, selectedPlanId],
   )
+  const latestReview = selectedPlan?.advisoryReviews[0] ?? null
 
   useEffect(() => {
     void fetchPlans()
@@ -521,6 +553,25 @@ function App() {
     }
   }
 
+  async function generateAdvisoryReview() {
+    if (!selectedPlan) return
+
+    setIsGeneratingReview(true)
+    setError(null)
+
+    try {
+      const updatedPlan = await requestUpdatedPlan(
+        `${API_BASE_URL}/api/budget-plans/${selectedPlan.id}/advisory-review`,
+        'POST',
+      )
+      applyUpdatedPlan(updatedPlan)
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to generate an advisory review.')
+    } finally {
+      setIsGeneratingReview(false)
+    }
+  }
+
   async function deletePlan(plan: BudgetPlan) {
     if (!window.confirm(`Delete “${plan.title}”? This cannot be undone.`)) {
       return
@@ -693,6 +744,71 @@ function App() {
                   <span>Fixed expenses: {currencyFormatter.format(selectedPlan.summary.totalFixedExpenses)}</span>
                   <span>Flexible expenses: {currencyFormatter.format(selectedPlan.summary.totalFlexibleExpenses)}</span>
                 </div>
+
+                <section className="advisory-panel" aria-labelledby="advisory-heading">
+                  <div className="advisory-header">
+                    <div>
+                      <p className="eyebrow">Advisory review</p>
+                      <h3 id="advisory-heading">Cash-flow interpretation</h3>
+                      <p>
+                        General planning insight only. PayPilot does not provide investment, tax, lending, or regulated financial advice.
+                      </p>
+                    </div>
+                    <button
+                      className="button button-primary"
+                      type="button"
+                      onClick={() => void generateAdvisoryReview()}
+                      disabled={isGeneratingReview}
+                    >
+                      {isGeneratingReview ? 'Generating…' : latestReview ? 'Regenerate review' : 'Generate review'}
+                    </button>
+                  </div>
+
+                  {latestReview ? (
+                    <div className="review-card">
+                      <div className="review-meta">
+                        <span className={`status-badge status-${latestReview.status.toLowerCase()}`}>
+                          {statusLabel(latestReview.status)}
+                        </span>
+                        <span>{reviewTypeLabel(latestReview.reviewType)} · {formatDateTime(latestReview.createdAt)}</span>
+                      </div>
+                      <p className="review-summary">{latestReview.summary}</p>
+                      <div className="insight-grid">
+                        <article>
+                          <span>Risk factor</span>
+                          <p>{latestReview.riskFactor ?? 'No major risk factor detected from the current plan.'}</p>
+                        </article>
+                        <article>
+                          <span>Positive signal</span>
+                          <p>{latestReview.positiveObservation ?? 'No positive signal recorded yet.'}</p>
+                        </article>
+                        <article>
+                          <span>Suggested adjustment</span>
+                          <p>{latestReview.suggestedAdjustment ?? 'No adjustment suggested right now.'}</p>
+                        </article>
+                      </div>
+
+                      {selectedPlan.advisoryReviews.length > 1 && (
+                        <details className="review-history">
+                          <summary>Previous reviews</summary>
+                          <div className="history-list">
+                            {selectedPlan.advisoryReviews.slice(1).map((review) => (
+                              <article key={review.id}>
+                                <span>{statusLabel(review.status)} · {formatDateTime(review.createdAt)}</span>
+                                <p>{review.summary}</p>
+                              </article>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="empty-advisory">
+                      <span aria-hidden="true">✧</span>
+                      <p>Generate a review to turn this plan’s totals into plain-English cash-flow observations.</p>
+                    </div>
+                  )}
+                </section>
 
                 {error && <p className="form-error workspace-error" role="alert">{error}</p>}
 
