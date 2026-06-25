@@ -7,17 +7,18 @@ PayPilot is a portfolio project built as a full-stack TypeScript application. It
 ## What it does today
 
 - Creates, lists, edits, and deletes custom budget plans.
+- Adds, edits, and deletes income sources, planned expenses, and savings goals inside each plan.
 - Stores plans in Neon PostgreSQL through Prisma ORM.
-- Displays a clear planning dashboard with plan dates and calculated budget summary placeholders.
-- Applies server-side validation for required fields, date validity, and valid date ranges.
+- Displays a clear planning dashboard with live totals, remaining buffer, expense-to-income ratio, savings rate, and budget health.
+- Applies server-side validation for required fields, positive money amounts, enums, date validity, and valid date ranges.
 - Removes related records automatically when a budget plan is deleted (via Prisma cascade relations).
 
 ## Roadmap
 
 - [x] Project foundation: React client, Express API, Prisma schema, Neon database, and documentation.
 - [x] Budget plan CRUD: create, view, update, delete, and persist plans.
-- [ ] Financial inputs: income sources, planned expenses, and savings goals.
-- [ ] Budget analysis: totals, remaining buffer, ratios, and health status.
+- [x] Financial inputs: income sources, planned expenses, and savings goals.
+- [x] Budget analysis: totals, remaining buffer, ratios, and health status.
 - [ ] Advisory review: rule-based insights and carefully scoped AI-assisted explanations.
 - [ ] Deployment and final portfolio documentation.
 
@@ -92,7 +93,7 @@ npm run dev
 
 > On Windows installations that block PowerShell script wrappers, use `npm.cmd` and `npx.cmd` in place of `npm` and `npx`.
 
-## Budget plan API
+## API endpoints
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
@@ -102,6 +103,15 @@ npm run dev
 | `GET` | `/api/budget-plans/:id` | Retrieve one budget plan |
 | `PUT` | `/api/budget-plans/:id` | Update a budget plan |
 | `DELETE` | `/api/budget-plans/:id` | Delete a budget plan |
+| `POST` | `/api/budget-plans/:id/income` | Add an income source |
+| `PUT` | `/api/income/:incomeId` | Update an income source |
+| `DELETE` | `/api/income/:incomeId` | Delete an income source |
+| `POST` | `/api/budget-plans/:id/expenses` | Add a planned expense |
+| `PUT` | `/api/expenses/:expenseId` | Update a planned expense |
+| `DELETE` | `/api/expenses/:expenseId` | Delete a planned expense |
+| `POST` | `/api/budget-plans/:id/savings-goals` | Add a savings goal |
+| `PUT` | `/api/savings-goals/:goalId` | Update a savings goal |
+| `DELETE` | `/api/savings-goals/:goalId` | Delete a savings goal |
 
 Example create request:
 
@@ -111,6 +121,19 @@ Example create request:
   "description": "Create a calmer month with room for savings.",
   "startDate": "2026-07-01",
   "endDate": "2026-07-31"
+}
+```
+
+Example financial input request:
+
+```json
+{
+  "name": "Rent",
+  "amount": "1200.00",
+  "category": "Housing",
+  "type": "FIXED",
+  "dueDate": "2026-07-10",
+  "notes": "Monthly planned rent"
 }
 ```
 
@@ -136,3 +159,4 @@ npm run lint
 ```
 
 The budget-plan API has also been exercised against the configured Neon database using a create, read, update, and delete flow with the temporary record removed afterward.
+The financial item API has been smoke-tested with temporary income, expense, and savings goal records that were created, updated, deleted, and then removed from the database.
