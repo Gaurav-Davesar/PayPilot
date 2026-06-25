@@ -1,11 +1,14 @@
 type ValidationResult<T> = { data: T } | { error: string };
 
 type Source = Record<string, unknown>;
+type ScheduleFrequency = "ONCE" | "WEEKLY" | "FORTNIGHTLY" | "MONTHLY" | "CUSTOM";
 
 export interface IncomeSourceInput {
   name: string;
   amount: string;
   expectedDate: Date | null;
+  frequency: ScheduleFrequency;
+  customDates: Date[];
   notes: string | null;
 }
 
@@ -15,6 +18,8 @@ export interface ExpenseInput {
   category: string;
   type: "FIXED" | "FLEXIBLE";
   dueDate: Date | null;
+  frequency: ScheduleFrequency;
+  customDates: Date[];
   notes: string | null;
 }
 
@@ -32,6 +37,7 @@ const MAX_MONEY_AMOUNT = 1_000_000_000;
 
 const EXPENSE_TYPES = ["FIXED", "FLEXIBLE"] as const;
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH"] as const;
+const SCHEDULE_FREQUENCIES = ["ONCE", "WEEKLY", "FORTNIGHTLY", "MONTHLY", "CUSTOM"] as const;
 
 function asObject(value: unknown): Source | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -131,6 +137,36 @@ function parseOptionalDate(
   return { value: date };
 }
 
+function parseOptionalDateArray(
+  value: unknown,
+  fieldName: string,
+): { value: Date[] | undefined } | { error: string } {
+  if (value === undefined) {
+    return { value: undefined };
+  }
+
+  if (!Array.isArray(value)) {
+    return { error: `${fieldName} must be a list of valid ISO date strings.` };
+  }
+
+  const dates = value.map((entry) => {
+    if (typeof entry !== "string" || entry.trim() === "") {
+      return null;
+    }
+
+    const date = new Date(entry);
+    return Number.isNaN(date.getTime()) ? null : date;
+  });
+
+  if (dates.some((date) => date === null)) {
+    return { error: `${fieldName} must contain only valid ISO date strings.` };
+  }
+
+  return {
+    value: (dates as Date[]).sort((left, right) => left.getTime() - right.getTime()),
+  };
+}
+
 function parseRequiredEnum<T extends string>(
   value: unknown,
   fieldName: string,
@@ -159,6 +195,39 @@ function parseOptionalEnum<T extends string>(
   return parseRequiredEnum(value, fieldName, allowedValues);
 }
 
+function parseSchedule(
+  input: Source,
+  existing?: { frequency: ScheduleFrequency; customDates: Date[] },
+): { value: { frequency: ScheduleFrequency; customDates: Date[] } } | { error: string } {
+  const parsedFrequency =
+    input.frequency === undefined
+      ? { value: existing?.frequency ?? "ONCE" }
+      : parseRequiredEnum(input.frequency, "Frequency", SCHEDULE_FREQUENCIES);
+  if ("error" in parsedFrequency) {
+    return parsedFrequency;
+  }
+
+  const parsedCustomDates =
+    input.customDates === undefined
+      ? { value: existing?.customDates }
+      : parseOptionalDateArray(input.customDates, "Custom dates");
+  if ("error" in parsedCustomDates) {
+    return parsedCustomDates;
+  }
+
+  const customDates = parsedCustomDates.value ?? [];
+  if (parsedFrequency.value === "CUSTOM" && customDates.length === 0) {
+    return { error: "Custom frequency requires at least one custom date." };
+  }
+
+  return {
+    value: {
+      frequency: parsedFrequency.value,
+      customDates: parsedFrequency.value === "CUSTOM" ? customDates : [],
+    },
+  };
+}
+
 export function validateCreateIncomeSource(value: unknown): ValidationResult<IncomeSourceInput> {
   const input = asObject(value);
   if (!input) {
@@ -174,6 +243,9 @@ export function validateCreateIncomeSource(value: unknown): ValidationResult<Inc
   const expectedDate = parseOptionalDate(input.expectedDate, "Expected date");
   if ("error" in expectedDate) return expectedDate;
 
+  const schedule = parseSchedule(input);
+  if ("error" in schedule) return schedule;
+
   const notes = parseOptionalText(input.notes, "Notes", NOTES_MAX_LENGTH);
   if ("error" in notes) return notes;
 
@@ -182,6 +254,8 @@ export function validateCreateIncomeSource(value: unknown): ValidationResult<Inc
       name: name.value,
       amount: amount.value,
       expectedDate: expectedDate.value ?? null,
+      frequency: schedule.value.frequency,
+      customDates: schedule.value.customDates,
       notes: notes.value ?? null,
     },
   };
@@ -211,6 +285,9 @@ export function validateUpdateIncomeSource(
       : parseOptionalDate(input.expectedDate, "Expected date");
   if ("error" in expectedDate) return expectedDate;
 
+  const schedule = parseSchedule(input, existing);
+  if ("error" in schedule) return schedule;
+
   const notes =
     input.notes === undefined
       ? { value: existing.notes }
@@ -222,6 +299,8 @@ export function validateUpdateIncomeSource(
       name: name.value,
       amount: amount.value,
       expectedDate: expectedDate.value ?? null,
+      frequency: schedule.value.frequency,
+      customDates: schedule.value.customDates,
       notes: notes.value ?? null,
     },
   };
@@ -248,6 +327,9 @@ export function validateCreateExpense(value: unknown): ValidationResult<ExpenseI
   const dueDate = parseOptionalDate(input.dueDate, "Due date");
   if ("error" in dueDate) return dueDate;
 
+  const schedule = parseSchedule(input);
+  if ("error" in schedule) return schedule;
+
   const notes = parseOptionalText(input.notes, "Notes", NOTES_MAX_LENGTH);
   if ("error" in notes) return notes;
 
@@ -258,6 +340,8 @@ export function validateCreateExpense(value: unknown): ValidationResult<ExpenseI
       category: category.value,
       type: type.value,
       dueDate: dueDate.value ?? null,
+      frequency: schedule.value.frequency,
+      customDates: schedule.value.customDates,
       notes: notes.value ?? null,
     },
   };
@@ -299,6 +383,9 @@ export function validateUpdateExpense(
       : parseOptionalDate(input.dueDate, "Due date");
   if ("error" in dueDate) return dueDate;
 
+  const schedule = parseSchedule(input, existing);
+  if ("error" in schedule) return schedule;
+
   const notes =
     input.notes === undefined
       ? { value: existing.notes }
@@ -312,6 +399,8 @@ export function validateUpdateExpense(
       category: category.value,
       type: type.value,
       dueDate: dueDate.value ?? null,
+      frequency: schedule.value.frequency,
+      customDates: schedule.value.customDates,
       notes: notes.value ?? null,
     },
   };

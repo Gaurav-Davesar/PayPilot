@@ -6,6 +6,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5000
 type BudgetStatus = 'HEALTHY' | 'TIGHT' | 'OVER_BUDGET'
 type ExpenseType = 'FIXED' | 'FLEXIBLE'
 type Priority = 'LOW' | 'MEDIUM' | 'HIGH'
+type ScheduleFrequency = 'ONCE' | 'WEEKLY' | 'FORTNIGHTLY' | 'MONTHLY' | 'CUSTOM'
 type FinancialItemKind = 'income' | 'expense' | 'goal'
 
 interface IncomeSource {
@@ -13,6 +14,10 @@ interface IncomeSource {
   name: string
   amount: number
   expectedDate: string | null
+  frequency: ScheduleFrequency
+  customDates: string[]
+  occurrenceCount: number
+  projectedTotal: number
   notes: string | null
   createdAt: string
   updatedAt: string
@@ -25,6 +30,10 @@ interface Expense {
   category: string
   type: ExpenseType
   dueDate: string | null
+  frequency: ScheduleFrequency
+  customDates: string[]
+  occurrenceCount: number
+  projectedTotal: number
   notes: string | null
   createdAt: string
   updatedAt: string
@@ -75,6 +84,8 @@ interface IncomeForm {
   name: string
   amount: string
   expectedDate: string
+  frequency: ScheduleFrequency
+  customDates: string
   notes: string
 }
 
@@ -84,6 +95,8 @@ interface ExpenseForm {
   category: string
   type: ExpenseType
   dueDate: string
+  frequency: ScheduleFrequency
+  customDates: string
   notes: string
 }
 
@@ -110,6 +123,8 @@ const emptyIncomeForm: IncomeForm = {
   name: '',
   amount: '',
   expectedDate: '',
+  frequency: 'ONCE',
+  customDates: '',
   notes: '',
 }
 
@@ -119,6 +134,8 @@ const emptyExpenseForm: ExpenseForm = {
   category: '',
   type: 'FIXED',
   dueDate: '',
+  frequency: 'ONCE',
+  customDates: '',
   notes: '',
 }
 
@@ -153,12 +170,65 @@ function toDateInputValue(date: string | null) {
   return date ? date.slice(0, 10) : ''
 }
 
+function customDatesToText(dates: string[]) {
+  return dates.map((date) => toDateInputValue(date)).join('\n')
+}
+
+function parseCustomDatesText(value: string) {
+  return value
+    .split(/[\n,]+/)
+    .map((date) => date.trim())
+    .filter(Boolean)
+}
+
 function statusLabel(status: BudgetStatus) {
   return status.toLowerCase().replace(/_/g, ' ').replace(/^\w/, (letter) => letter.toUpperCase())
 }
 
 function enumLabel(value: string) {
   return value.toLowerCase().replace(/_/g, ' ').replace(/^\w/, (letter) => letter.toUpperCase())
+}
+
+function scheduleLabel(frequency: ScheduleFrequency) {
+  const labels: Record<ScheduleFrequency, string> = {
+    ONCE: 'One-time',
+    WEEKLY: 'Weekly',
+    FORTNIGHTLY: 'Fortnightly',
+    MONTHLY: 'Monthly',
+    CUSTOM: 'Custom dates',
+  }
+
+  return labels[frequency]
+}
+
+function occurrenceLabel(count: number) {
+  return `${count} ${count === 1 ? 'occurrence' : 'occurrences'} in this plan`
+}
+
+function formatCustomDatePreview(dates: string[]) {
+  if (dates.length === 0) {
+    return 'No custom dates set'
+  }
+
+  const formattedDates = dates.slice(0, 3).map(formatDate).join(', ')
+  return dates.length > 3 ? `${formattedDates}, +${dates.length - 3} more` : formattedDates
+}
+
+function scheduleDetails(
+  frequency: ScheduleFrequency,
+  anchorDate: string | null,
+  customDates: string[],
+  occurrenceCount: number,
+) {
+  if (frequency === 'CUSTOM') {
+    return `${scheduleLabel(frequency)} · ${formatCustomDatePreview(customDates)} · ${occurrenceLabel(occurrenceCount)}`
+  }
+
+  if (frequency === 'ONCE') {
+    return `${scheduleLabel(frequency)} · ${formatOptionalDate(anchorDate)} · ${occurrenceLabel(occurrenceCount)}`
+  }
+
+  return `${scheduleLabel(frequency)} from ${anchorDate ? formatDate(anchorDate) : 'plan start'} · ${occurrenceLabel(occurrenceCount)}`
 }
 
 function formatPercent(value: number | null) {
@@ -265,6 +335,8 @@ function App() {
       name: incomeSource.name,
       amount: String(incomeSource.amount),
       expectedDate: toDateInputValue(incomeSource.expectedDate),
+      frequency: incomeSource.frequency,
+      customDates: customDatesToText(incomeSource.customDates),
       notes: incomeSource.notes ?? '',
     })
     setError(null)
@@ -278,6 +350,8 @@ function App() {
       category: expense.category,
       type: expense.type,
       dueDate: toDateInputValue(expense.dueDate),
+      frequency: expense.frequency,
+      customDates: customDatesToText(expense.customDates),
       notes: expense.notes ?? '',
     })
     setError(null)
@@ -373,6 +447,8 @@ function App() {
         name: incomeForm.name,
         amount: incomeForm.amount,
         expectedDate: incomeForm.expectedDate || null,
+        frequency: incomeForm.frequency,
+        customDates: incomeForm.frequency === 'CUSTOM' ? parseCustomDatesText(incomeForm.customDates) : [],
         notes: incomeForm.notes || null,
       })
 
@@ -403,6 +479,8 @@ function App() {
         category: expenseForm.category,
         type: expenseForm.type,
         dueDate: expenseForm.dueDate || null,
+        frequency: expenseForm.frequency,
+        customDates: expenseForm.frequency === 'CUSTOM' ? parseCustomDatesText(expenseForm.customDates) : [],
         notes: expenseForm.notes || null,
       })
 
@@ -660,6 +738,37 @@ function App() {
                             onChange={(event) => setIncomeForm({ ...incomeForm, expectedDate: event.target.value })}
                           />
                         </label>
+                        <label>
+                          Frequency
+                          <select
+                            value={incomeForm.frequency}
+                            onChange={(event) =>
+                              setIncomeForm({
+                                ...incomeForm,
+                                frequency: event.target.value as ScheduleFrequency,
+                              })
+                            }
+                          >
+                            <option value="ONCE">One-time</option>
+                            <option value="WEEKLY">Weekly</option>
+                            <option value="FORTNIGHTLY">Fortnightly</option>
+                            <option value="MONTHLY">Monthly</option>
+                            <option value="CUSTOM">Custom dates</option>
+                          </select>
+                        </label>
+                        {incomeForm.frequency === 'CUSTOM' && (
+                          <label className="wide-field">
+                            Custom income dates
+                            <textarea
+                              value={incomeForm.customDates}
+                              onChange={(event) => setIncomeForm({ ...incomeForm, customDates: event.target.value })}
+                              placeholder={'2026-07-05\n2026-07-19\n2026-08-02'}
+                              rows={3}
+                              required
+                            />
+                            <span className="field-help">Add one date per line, or separate dates with commas.</span>
+                          </label>
+                        )}
                       </div>
                       <label>
                         Notes <span className="optional">Optional</span>
@@ -689,10 +798,18 @@ function App() {
                           <article className="item-row" key={incomeSource.id}>
                             <div className="item-main">
                               <strong>{incomeSource.name}</strong>
-                              <span>{formatOptionalDate(incomeSource.expectedDate)}</span>
+                              <span>
+                                {currencyFormatter.format(incomeSource.amount)} each ·{' '}
+                                {scheduleDetails(
+                                  incomeSource.frequency,
+                                  incomeSource.expectedDate,
+                                  incomeSource.customDates,
+                                  incomeSource.occurrenceCount,
+                                )}
+                              </span>
                               {incomeSource.notes && <small>{incomeSource.notes}</small>}
                             </div>
-                            <span className="item-amount">{currencyFormatter.format(incomeSource.amount)}</span>
+                            <span className="item-amount">{currencyFormatter.format(incomeSource.projectedTotal)}</span>
                             <div className="item-actions">
                               <button className="text-button" type="button" onClick={() => beginEditIncome(incomeSource)}>Edit</button>
                               <button
@@ -770,6 +887,37 @@ function App() {
                             onChange={(event) => setExpenseForm({ ...expenseForm, dueDate: event.target.value })}
                           />
                         </label>
+                        <label>
+                          Frequency
+                          <select
+                            value={expenseForm.frequency}
+                            onChange={(event) =>
+                              setExpenseForm({
+                                ...expenseForm,
+                                frequency: event.target.value as ScheduleFrequency,
+                              })
+                            }
+                          >
+                            <option value="ONCE">One-time</option>
+                            <option value="WEEKLY">Weekly</option>
+                            <option value="FORTNIGHTLY">Fortnightly</option>
+                            <option value="MONTHLY">Monthly</option>
+                            <option value="CUSTOM">Custom dates</option>
+                          </select>
+                        </label>
+                        {expenseForm.frequency === 'CUSTOM' && (
+                          <label className="wide-field">
+                            Custom expense dates
+                            <textarea
+                              value={expenseForm.customDates}
+                              onChange={(event) => setExpenseForm({ ...expenseForm, customDates: event.target.value })}
+                              placeholder={'2026-07-01\n2026-07-15\n2026-07-29'}
+                              rows={3}
+                              required
+                            />
+                            <span className="field-help">Add one date per line, or separate dates with commas.</span>
+                          </label>
+                        )}
                       </div>
                       <label>
                         Notes <span className="optional">Optional</span>
@@ -799,11 +947,19 @@ function App() {
                           <article className="item-row" key={expense.id}>
                             <div className="item-main">
                               <strong>{expense.name}</strong>
-                              <span>{expense.category} · {formatOptionalDate(expense.dueDate)}</span>
+                              <span>
+                                {expense.category} · {currencyFormatter.format(expense.amount)} each ·{' '}
+                                {scheduleDetails(
+                                  expense.frequency,
+                                  expense.dueDate,
+                                  expense.customDates,
+                                  expense.occurrenceCount,
+                                )}
+                              </span>
                               <span className={`pill pill-${expense.type.toLowerCase()}`}>{enumLabel(expense.type)}</span>
                               {expense.notes && <small>{expense.notes}</small>}
                             </div>
-                            <span className="item-amount">{currencyFormatter.format(expense.amount)}</span>
+                            <span className="item-amount">{currencyFormatter.format(expense.projectedTotal)}</span>
                             <div className="item-actions">
                               <button className="text-button" type="button" onClick={() => beginEditExpense(expense)}>Edit</button>
                               <button

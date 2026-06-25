@@ -101,6 +101,8 @@ budgetPlanId    String      Foreign key
 name            String      Required
 amount          Decimal     Required
 expectedDate    DateTime?   Optional
+frequency       ScheduleFrequency Required, default ONCE
+customDates     DateTime[]  Optional list for custom schedules
 notes           String?     Optional
 createdAt       DateTime    Auto-generated
 updatedAt       DateTime    Auto-updated
@@ -111,6 +113,8 @@ updatedAt       DateTime    Auto-updated
 * `name` is required.
 * `amount` is required.
 * `amount` must be greater than 0.
+* `frequency` must be `ONCE`, `WEEKLY`, `FORTNIGHTLY`, `MONTHLY`, or `CUSTOM`.
+* `customDates` must include at least one valid date when `frequency` is `CUSTOM`.
 * `budgetPlanId` must reference an existing budget plan.
 
 ### Example
@@ -122,6 +126,8 @@ updatedAt       DateTime    Auto-updated
   "name": "Casual Work Pay",
   "amount": 2800.00,
   "expectedDate": "2026-07-15",
+  "frequency": "FORTNIGHTLY",
+  "customDates": [],
   "notes": "Estimated pay"
 }
 ```
@@ -154,6 +160,8 @@ amount          Decimal       Required
 category        String        Required
 type            ExpenseType   Required
 dueDate         DateTime?     Optional
+frequency       ScheduleFrequency Required, default ONCE
+customDates     DateTime[]    Optional list for custom schedules
 notes           String?       Optional
 createdAt       DateTime      Auto-generated
 updatedAt       DateTime      Auto-updated
@@ -166,6 +174,16 @@ FIXED
 FLEXIBLE
 ```
 
+### ScheduleFrequency Enum
+
+```text
+ONCE
+WEEKLY
+FORTNIGHTLY
+MONTHLY
+CUSTOM
+```
+
 ### Validation Rules
 
 * `name` is required.
@@ -173,6 +191,8 @@ FLEXIBLE
 * `amount` must be greater than 0.
 * `category` is required.
 * `type` must be either `FIXED` or `FLEXIBLE`.
+* `frequency` must be `ONCE`, `WEEKLY`, `FORTNIGHTLY`, `MONTHLY`, or `CUSTOM`.
+* `customDates` must include at least one valid date when `frequency` is `CUSTOM`.
 * `budgetPlanId` must reference an existing budget plan.
 
 ### Example
@@ -186,6 +206,8 @@ FLEXIBLE
   "category": "Housing",
   "type": "FIXED",
   "dueDate": "2026-07-05",
+  "frequency": "MONTHLY",
+  "customDates": [],
   "notes": "Monthly rent payment"
 }
 ```
@@ -344,6 +366,8 @@ model IncomeSource {
   name         String
   amount       Decimal
   expectedDate DateTime?
+  frequency    ScheduleFrequency @default(ONCE)
+  customDates  DateTime[]        @default([])
   notes        String?
 
   createdAt    DateTime @default(now())
@@ -360,6 +384,8 @@ model Expense {
   category     String
   type         ExpenseType
   dueDate      DateTime?
+  frequency    ScheduleFrequency @default(ONCE)
+  customDates  DateTime[]        @default([])
   notes        String?
 
   createdAt    DateTime @default(now())
@@ -417,6 +443,14 @@ enum ReviewType {
   RULE_BASED
   AI_ASSISTED
 }
+
+enum ScheduleFrequency {
+  ONCE
+  WEEKLY
+  FORTNIGHTLY
+  MONTHLY
+  CUSTOM
+}
 ```
 
 ## 6. Relationships
@@ -468,25 +502,25 @@ Budget summaries do not need to be stored in the MVP. They can be calculated dyn
 ### Total Income
 
 ```text
-totalIncome = sum of all income source amounts
+totalIncome = sum of income source amount × occurrence count within the plan date range
 ```
 
 ### Total Expenses
 
 ```text
-totalExpenses = sum of all expense amounts
+totalExpenses = sum of expense amount × occurrence count within the plan date range
 ```
 
 ### Total Fixed Expenses
 
 ```text
-totalFixedExpenses = sum of expenses where type = FIXED
+totalFixedExpenses = sum of projected expense totals where type = FIXED
 ```
 
 ### Total Flexible Expenses
 
 ```text
-totalFlexibleExpenses = sum of expenses where type = FLEXIBLE
+totalFlexibleExpenses = sum of projected expense totals where type = FLEXIBLE
 ```
 
 ### Total Savings Goals

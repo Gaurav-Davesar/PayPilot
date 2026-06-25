@@ -41,3 +41,13 @@ On Windows systems that block PowerShell scripts, use `npx.cmd prisma <command>`
 - `DELETE /api/savings-goals/:goalId`
 
 Financial item mutations return the updated budget plan snapshot, including item lists and recalculated summary totals.
+
+Income sources and expenses support these schedule frequencies:
+
+- `ONCE`
+- `WEEKLY`
+- `FORTNIGHTLY`
+- `MONTHLY`
+- `CUSTOM`
+
+For `CUSTOM`, pass `customDates` as an array of ISO date strings. For weekly, fortnightly, and monthly records, the income `expectedDate` or expense `dueDate` acts as the first occurrence date; if it is omitted, the budget plan start date is used for projection.

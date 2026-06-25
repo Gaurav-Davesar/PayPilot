@@ -30,6 +30,8 @@ model IncomeSource {
   name         String
   amount       Decimal
   expectedDate DateTime?
+  frequency    ScheduleFrequency @default(ONCE)
+  customDates  DateTime[]        @default([])
   notes        String?
 
   createdAt DateTime @default(now())
@@ -46,6 +48,8 @@ model Expense {
   category String
   type     ExpenseType
   dueDate  DateTime?
+  frequency ScheduleFrequency @default(ONCE)
+  customDates DateTime[]      @default([])
   notes    String?
 
   createdAt DateTime @default(now())
@@ -102,4 +106,12 @@ enum BudgetStatus {
 enum ReviewType {
   RULE_BASED
   AI_ASSISTED
+}
+
+enum ScheduleFrequency {
+  ONCE
+  WEEKLY
+  FORTNIGHTLY
+  MONTHLY
+  CUSTOM
 }

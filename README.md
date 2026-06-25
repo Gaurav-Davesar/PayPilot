@@ -8,6 +8,7 @@ PayPilot is a portfolio project built as a full-stack TypeScript application. It
 
 - Creates, lists, edits, and deletes custom budget plans.
 - Adds, edits, and deletes income sources, planned expenses, and savings goals inside each plan.
+- Supports one-time, weekly, fortnightly, monthly, and custom-date schedules for money in and money out.
 - Stores plans in Neon PostgreSQL through Prisma ORM.
 - Displays a clear planning dashboard with live totals, remaining buffer, expense-to-income ratio, savings rate, and budget health.
 - Applies server-side validation for required fields, positive money amounts, enums, date validity, and valid date ranges.
@@ -133,7 +134,30 @@ Example financial input request:
   "category": "Housing",
   "type": "FIXED",
   "dueDate": "2026-07-10",
+  "frequency": "MONTHLY",
+  "customDates": [],
   "notes": "Monthly planned rent"
+}
+```
+
+Income and expense records use the amount as the value per occurrence. PayPilot counts matching occurrences inside the budget plan date range and uses that projected total in the summary. Supported `frequency` values are:
+
+- `ONCE`
+- `WEEKLY`
+- `FORTNIGHTLY`
+- `MONTHLY`
+- `CUSTOM`
+
+For `CUSTOM`, include one or more dates:
+
+```json
+{
+  "name": "Event tickets",
+  "amount": "75.00",
+  "category": "Entertainment",
+  "type": "FLEXIBLE",
+  "frequency": "CUSTOM",
+  "customDates": ["2026-07-05", "2026-07-19"]
 }
 ```
 
@@ -160,3 +184,4 @@ npm run lint
 
 The budget-plan API has also been exercised against the configured Neon database using a create, read, update, and delete flow with the temporary record removed afterward.
 The financial item API has been smoke-tested with temporary income, expense, and savings goal records that were created, updated, deleted, and then removed from the database.
+Recurring schedule behavior has also been smoke-tested with weekly, fortnightly, and custom-date records.

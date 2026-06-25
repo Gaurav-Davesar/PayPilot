@@ -7,6 +7,8 @@ const budgetPlanInclude = {
       name: true,
       amount: true,
       expectedDate: true,
+      frequency: true,
+      customDates: true,
       notes: true,
       createdAt: true,
       updatedAt: true,
@@ -23,6 +25,8 @@ const budgetPlanInclude = {
       category: true,
       type: true,
       dueDate: true,
+      frequency: true,
+      customDates: true,
       notes: true,
       createdAt: true,
       updatedAt: true,
@@ -53,16 +57,102 @@ export type BudgetPlanWithFinancialItems = Prisma.BudgetPlanGetPayload<{
 
 export const budgetPlanWithFinancialItems = budgetPlanInclude;
 
-const total = (values: Array<{ amount: { toNumber(): number } }>) =>
-  values.reduce((sum, item) => sum + item.amount.toNumber(), 0);
-
 const formatNullableDate = (value: Date | null) => (value ? value.toISOString() : null);
 
+const MS_PER_DAY = 24 * 60 * 60 * 1_000;
+
+type ScheduledItem = {
+  amount: { toNumber(): number };
+  frequency: "ONCE" | "WEEKLY" | "FORTNIGHTLY" | "MONTHLY" | "CUSTOM";
+  customDates: Date[];
+};
+
+function isWithinPlan(date: Date, plan: { startDate: Date; endDate: Date }) {
+  return date >= plan.startDate && date <= plan.endDate;
+}
+
+function addDays(date: Date, days: number) {
+  return new Date(date.getTime() + days * MS_PER_DAY);
+}
+
+function addMonths(date: Date, months: number) {
+  const nextDate = new Date(date);
+  const originalDay = nextDate.getUTCDate();
+  nextDate.setUTCDate(1);
+  nextDate.setUTCMonth(nextDate.getUTCMonth() + months);
+
+  const lastDayOfTargetMonth = new Date(
+    Date.UTC(nextDate.getUTCFullYear(), nextDate.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  nextDate.setUTCDate(Math.min(originalDay, lastDayOfTargetMonth));
+
+  return nextDate;
+}
+
+function countRecurringOccurrences(
+  anchorDate: Date | null,
+  frequency: ScheduledItem["frequency"],
+  plan: { startDate: Date; endDate: Date },
+) {
+  const firstOccurrence = anchorDate ?? plan.startDate;
+
+  if (frequency === "ONCE") {
+    return anchorDate && !isWithinPlan(anchorDate, plan) ? 0 : 1;
+  }
+
+  let occurrence = firstOccurrence;
+  let count = 0;
+
+  while (occurrence < plan.startDate) {
+    occurrence =
+      frequency === "MONTHLY"
+        ? addMonths(occurrence, 1)
+        : addDays(occurrence, frequency === "FORTNIGHTLY" ? 14 : 7);
+  }
+
+  while (occurrence <= plan.endDate) {
+    count += 1;
+    occurrence =
+      frequency === "MONTHLY"
+        ? addMonths(occurrence, 1)
+        : addDays(occurrence, frequency === "FORTNIGHTLY" ? 14 : 7);
+  }
+
+  return count;
+}
+
+function getOccurrenceCount(
+  item: ScheduledItem,
+  anchorDate: Date | null,
+  plan: { startDate: Date; endDate: Date },
+) {
+  if (item.frequency === "CUSTOM") {
+    return item.customDates.filter((date) => isWithinPlan(date, plan)).length;
+  }
+
+  return countRecurringOccurrences(anchorDate, item.frequency, plan);
+}
+
+function projectedAmount(
+  item: ScheduledItem,
+  anchorDate: Date | null,
+  plan: { startDate: Date; endDate: Date },
+) {
+  return item.amount.toNumber() * getOccurrenceCount(item, anchorDate, plan);
+}
+
 export function presentBudgetPlan(plan: BudgetPlanWithFinancialItems) {
-  const totalIncome = total(plan.incomeSources);
-  const totalExpenses = total(plan.expenses);
+  const totalIncome = plan.incomeSources.reduce(
+    (sum, incomeSource) => sum + projectedAmount(incomeSource, incomeSource.expectedDate, plan),
+    0,
+  );
+  const totalExpenses = plan.expenses.reduce(
+    (sum, expense) => sum + projectedAmount(expense, expense.dueDate, plan),
+    0,
+  );
   const totalFixedExpenses = plan.expenses.reduce(
-    (sum, expense) => sum + (expense.type === "FIXED" ? expense.amount.toNumber() : 0),
+    (sum, expense) =>
+      sum + (expense.type === "FIXED" ? projectedAmount(expense, expense.dueDate, plan) : 0),
     0,
   );
   const totalFlexibleExpenses = totalExpenses - totalFixedExpenses;
@@ -89,21 +179,41 @@ export function presentBudgetPlan(plan: BudgetPlanWithFinancialItems) {
     createdAt: plan.createdAt.toISOString(),
     updatedAt: plan.updatedAt.toISOString(),
     incomeSources: plan.incomeSources.map((incomeSource) => ({
+      ...(() => {
+        const occurrenceCount = getOccurrenceCount(incomeSource, incomeSource.expectedDate, plan);
+
+        return {
+          occurrenceCount,
+          projectedTotal: incomeSource.amount.toNumber() * occurrenceCount,
+        };
+      })(),
       id: incomeSource.id,
       name: incomeSource.name,
       amount: incomeSource.amount.toNumber(),
       expectedDate: formatNullableDate(incomeSource.expectedDate),
+      frequency: incomeSource.frequency,
+      customDates: incomeSource.customDates.map((date) => date.toISOString()),
       notes: incomeSource.notes,
       createdAt: incomeSource.createdAt.toISOString(),
       updatedAt: incomeSource.updatedAt.toISOString(),
     })),
     expenses: plan.expenses.map((expense) => ({
+      ...(() => {
+        const occurrenceCount = getOccurrenceCount(expense, expense.dueDate, plan);
+
+        return {
+          occurrenceCount,
+          projectedTotal: expense.amount.toNumber() * occurrenceCount,
+        };
+      })(),
       id: expense.id,
       name: expense.name,
       amount: expense.amount.toNumber(),
       category: expense.category,
       type: expense.type,
       dueDate: formatNullableDate(expense.dueDate),
+      frequency: expense.frequency,
+      customDates: expense.customDates.map((date) => date.toISOString()),
       notes: expense.notes,
       createdAt: expense.createdAt.toISOString(),
       updatedAt: expense.updatedAt.toISOString(),

@@ -69,6 +69,8 @@ financialItemRouter.put("/income/:incomeId", async (req, res, next) => {
         name: true,
         amount: true,
         expectedDate: true,
+        frequency: true,
+        customDates: true,
         notes: true,
       },
     });
@@ -82,6 +84,8 @@ financialItemRouter.put("/income/:incomeId", async (req, res, next) => {
       name: existing.name,
       amount: existing.amount.toString(),
       expectedDate: existing.expectedDate,
+      frequency: existing.frequency,
+      customDates: existing.customDates,
       notes: existing.notes,
     });
     if ("error" in validation) {
@@ -161,6 +165,8 @@ financialItemRouter.put("/expenses/:expenseId", async (req, res, next) => {
         category: true,
         type: true,
         dueDate: true,
+        frequency: true,
+        customDates: true,
         notes: true,
       },
     });
@@ -176,6 +182,8 @@ financialItemRouter.put("/expenses/:expenseId", async (req, res, next) => {
       category: existing.category,
       type: existing.type,
       dueDate: existing.dueDate,
+      frequency: existing.frequency,
+      customDates: existing.customDates,
       notes: existing.notes,
     });
     if ("error" in validation) {

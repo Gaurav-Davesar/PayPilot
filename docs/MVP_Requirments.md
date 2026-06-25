@@ -127,6 +127,7 @@ Each income source should include:
 * Name
 * Amount
 * Optional expected date
+* Frequency: one-time, weekly, fortnightly, monthly, or custom dates
 * Optional notes
 
 Validation rules:
@@ -134,6 +135,7 @@ Validation rules:
 * Name is required.
 * Amount is required.
 * Amount must be greater than zero.
+* Custom frequency requires at least one valid custom date.
 
 ### FR6: Manage Income Sources
 
@@ -150,6 +152,7 @@ Each expense should include:
 * Category
 * Expense type: fixed or flexible
 * Optional due date
+* Frequency: one-time, weekly, fortnightly, monthly, or custom dates
 * Optional notes
 
 Validation rules:
@@ -159,6 +162,7 @@ Validation rules:
 * Amount must be greater than zero.
 * Category is required.
 * Expense type is required.
+* Custom frequency requires at least one valid custom date.
 
 ### FR8: Manage Expenses
 
